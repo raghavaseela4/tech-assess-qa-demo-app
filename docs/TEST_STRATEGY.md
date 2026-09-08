@@ -56,6 +56,21 @@ discovered" below.
 Result: **55 tests, 0 failures**, run via `mvn -f code/claims-service/pom.xml test`
 against the real codebase.
 
+- **`DockerComposeStackIT.java`** — a smoke test against the actually-running
+  Docker Compose stack (real HTTP calls to claims-service and bff-service
+  `/actuator/health`, a real JDBC query against Postgres). Tagged
+  `@Tag("integration")`, which plugs into an exclusion mechanism the project's
+  own `pom.xml` already defines (`surefire.excludedGroups=integration` by
+  default, with usage documented right in the pom's comments) — so it does
+  not run as part of the default `mvn test`, only via
+  `mvn test -Dgroups=integration -Dsurefire.excludedGroups=`. This is
+  deliberately the thinnest test that still proves something real: that the
+  containers Compose brings up actually talk to each other on the documented
+  ports/credentials. Requires the stack to be up first (`podman compose ...
+  up -d` for both infra and apps) — if it isn't, the test class skips itself
+  via a `@BeforeAll` reachability check rather than failing with a confusing
+  connection-refused stack trace.
+
 ## What was deliberately left out, and why
 
 - **Controller / HTTP layer (`@WebMvcTest`)** — controllers are thin pass-throughs
@@ -145,9 +160,12 @@ and use that parameter instead of `this.userId`.
 
 ```
 cd demo-app
-mvn -f code/claims-service/pom.xml test
-```
 
-Requires no running containers — all four test files are pure unit tests
-(domain logic + Mockito-mocked use cases), so they run in well under a second
-of actual test time once Maven's warm.
+# Fast unit suite (default) — no containers needed, ~55 tests
+mvn -f code/claims-service/pom.xml test
+
+# Integration smoke test — requires the Docker Compose stack running first
+podman compose -f docker-compose.infra.yml --in-pod false up -d
+podman compose -f docker-compose.apps.yml  --in-pod false up -d
+mvn -f code/claims-service/pom.xml test -Dgroups=integration -Dsurefire.excludedGroups=
+```

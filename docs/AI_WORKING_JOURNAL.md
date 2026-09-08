@@ -117,6 +117,21 @@ actually run in the real environment and the output was pasted back.
 
 ---
 
+**Adding a Docker Compose integration test**
+Initial delivery only had pure unit tests (no infra required) — reasonable
+for the time available, but it doesn't literally satisfy "runnable against
+the provided Docker Compose stack" if read strictly. Flagged this gap
+unprompted rather than waiting to be asked, then added `DockerComposeStackIT`
+on request. While writing it, checked the pom for an existing test-grouping
+convention before inventing one — and found the project already defines
+`surefire.excludedGroups=integration` with the exact `@Tag`/`-Dgroups` usage
+documented in pom comments. **Used the project's existing mechanism instead
+of adding a new one** (e.g. a Maven profile or a separate `verify` phase),
+since the codebase had already made that design decision and duplicating it
+would just be two ways to do the same thing.
+
+---
+
 ## Summary of the pattern across this session
 
 The AI's mistakes generally fell into two buckets: (1) trusting a documented
