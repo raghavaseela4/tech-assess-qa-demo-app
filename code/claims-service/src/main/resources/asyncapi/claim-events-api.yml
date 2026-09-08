@@ -1,0 +1,290 @@
+asyncapi: 3.0.0
+info:
+  title: Claim Events API
+  version: 0.0.1-SNAPSHOT
+  description: |
+    AsyncAPI specification for the Claims Service event pipeline.
+
+    The Claims Service publishes domain events to the `claim-events` Kafka topic
+    when claims are submitted or their status changes. These events are consumed
+    by the BFF service for real-time WebSocket broadcasting to connected clients.
+
+    Additionally, Debezium CDC captures row-level changes from the `claims` table
+    and publishes them to the `cdc.demo-app.public.claims` topic. The BFF consumes
+    these as a secondary real-time update channel.
+
+    **Serialisation:** JSON (no schema registry)
+    **Partitioning:** By claimId for per-claim ordering
+
+defaultContentType: application/json
+
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development (bare metal or IDE)
+  docker:
+    host: kafka:9092
+    protocol: kafka
+    description: Docker Compose environment
+
+channels:
+  claimEvents:
+    address: claim-events
+    description: |
+      Domain events published by the Claims Service when claim state changes.
+      Partitioned by claimId. Consumed by BFF for WebSocket broadcasting.
+    messages:
+      ClaimSubmittedMessage:
+        $ref: '#/components/messages/ClaimSubmittedMessage'
+      ClaimStatusChangedMessage:
+        $ref: '#/components/messages/ClaimStatusChangedMessage'
+
+  cdcClaims:
+    address: cdc.demo-app.public.claims
+    description: |
+      Debezium CDC events from the `claims` PostgreSQL table.
+      Published automatically by the Debezium PostgresConnector.
+      The BFF consumes these for real-time UI updates.
+    messages:
+      DebeziumClaimsMessage:
+        $ref: '#/components/messages/DebeziumClaimsMessage'
+
+operations:
+  publishClaimSubmitted:
+    action: send
+    channel:
+      $ref: '#/channels/claimEvents'
+    summary: Publish a ClaimSubmitted event when a new claim is created
+    messages:
+      - $ref: '#/channels/claimEvents/messages/ClaimSubmittedMessage'
+
+  publishClaimStatusChanged:
+    action: send
+    channel:
+      $ref: '#/channels/claimEvents'
+    summary: Publish a ClaimStatusChanged event when claim status transitions
+    messages:
+      - $ref: '#/channels/claimEvents/messages/ClaimStatusChangedMessage'
+
+  publishCdcClaims:
+    action: send
+    channel:
+      $ref: '#/channels/cdcClaims'
+    summary: >
+      Debezium PostgresConnector publishes CDC events from the claims table.
+      This operation documents the message contract; the publisher is Debezium (external),
+      not the claims-service application itself.
+    messages:
+      - $ref: '#/channels/cdcClaims/messages/DebeziumClaimsMessage'
+
+components:
+  messages:
+    ClaimSubmittedMessage:
+      name: ClaimSubmittedMessage
+      title: Claim Submitted
+      contentType: application/json
+      description: Published when a claimant submits a new insurance claim.
+      payload:
+        $ref: '#/components/schemas/ClaimSubmittedPayload'
+      examples:
+        - name: standardClaim
+          summary: A standard motor claim submission
+          payload:
+            eventId: "evt-a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            claimId: "d4e5f6a7-b8c9-0123-4567-89abcdef0123"
+            userId: "f6a7b8c9-d0e1-2345-6789-abcdef012345"
+            incidentDate: "2026-03-01"
+            claimAmount: 2500.00
+            occurredAt: "2026-03-02T10:30:00Z"
+
+    ClaimStatusChangedMessage:
+      name: ClaimStatusChangedMessage
+      title: Claim Status Changed
+      contentType: application/json
+      description: Published when an admin changes the status of a claim.
+      payload:
+        $ref: '#/components/schemas/ClaimStatusChangedPayload'
+      examples:
+        - name: approvedClaim
+          summary: Claim moved from UNDER_REVIEW to APPROVED
+          payload:
+            eventId: "evt-b2c3d4e5-f6a7-8901-bcde-f12345678901"
+            claimId: "d4e5f6a7-b8c9-0123-4567-89abcdef0123"
+            oldStatus: "UNDER_REVIEW"
+            newStatus: "APPROVED"
+            changedBy: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            occurredAt: "2026-03-05T14:22:00Z"
+
+    DebeziumClaimsMessage:
+      name: DebeziumClaimsMessage
+      title: Debezium CDC Claims Change
+      contentType: application/json
+      description: |
+        Debezium Change Data Capture envelope for the `claims` table.
+        Published automatically by the Debezium PostgresConnector.
+      payload:
+        $ref: '#/components/schemas/DebeziumEnvelope'
+      examples:
+        - name: claimCreated
+          summary: New claim row inserted (op=c)
+          payload:
+            op: "c"
+            before: null
+            after:
+              id: "d4e5f6a7-b8c9-0123-4567-89abcdef0123"
+              user_id: "f6a7b8c9-d0e1-2345-6789-abcdef012345"
+              status: "SUBMITTED"
+              claim_amount: 2500.00
+              incident_date: "2026-03-01"
+              description: "Motor vehicle collision"
+              created_at: "2026-03-02T10:30:00Z"
+              updated_at: "2026-03-02T10:30:00Z"
+            ts_ms: 1709370600000
+        - name: claimStatusUpdated
+          summary: Claim status changed (op=u)
+          payload:
+            op: "u"
+            before:
+              id: "d4e5f6a7-b8c9-0123-4567-89abcdef0123"
+              status: "SUBMITTED"
+            after:
+              id: "d4e5f6a7-b8c9-0123-4567-89abcdef0123"
+              user_id: "f6a7b8c9-d0e1-2345-6789-abcdef012345"
+              status: "UNDER_REVIEW"
+              claim_amount: 2500.00
+              incident_date: "2026-03-01"
+              description: "Motor vehicle collision"
+              created_at: "2026-03-02T10:30:00Z"
+              updated_at: "2026-03-05T09:00:00Z"
+            ts_ms: 1709625600000
+
+  schemas:
+    ClaimStatus:
+      type: string
+      description: The lifecycle status of an insurance claim
+      enum:
+        - SUBMITTED
+        - UNDER_REVIEW
+        - APPROVED
+        - REJECTED
+        - CLOSED
+
+    ClaimSubmittedPayload:
+      type: object
+      description: Payload for the ClaimSubmitted domain event
+      required:
+        - eventId
+        - claimId
+        - userId
+        - incidentDate
+        - claimAmount
+        - occurredAt
+      properties:
+        eventId:
+          type: string
+          description: Unique event identifier for idempotency
+        claimId:
+          type: string
+          format: uuid
+          description: The unique identifier of the submitted claim
+        userId:
+          type: string
+          format: uuid
+          description: The user who submitted the claim
+        incidentDate:
+          type: string
+          format: date
+          description: The date the incident occurred
+        claimAmount:
+          type: number
+          description: The monetary amount being claimed
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred
+
+    ClaimStatusChangedPayload:
+      type: object
+      description: Payload for the ClaimStatusChanged domain event
+      required:
+        - eventId
+        - claimId
+        - oldStatus
+        - newStatus
+        - occurredAt
+      properties:
+        eventId:
+          type: string
+          description: Unique event identifier for idempotency
+        claimId:
+          type: string
+          format: uuid
+          description: The claim whose status changed
+        oldStatus:
+          $ref: '#/components/schemas/ClaimStatus'
+        newStatus:
+          $ref: '#/components/schemas/ClaimStatus'
+        changedBy:
+          type: string
+          format: uuid
+          description: The admin user who changed the status (nullable)
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the status change occurred
+
+    ClaimBase:
+      type: object
+      description: Shared claim fields reused in CDC after schema and domain events
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ClaimStatus'
+        claim_amount:
+          type: number
+        incident_date:
+          type: string
+          format: date
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DebeziumEnvelope:
+      type: object
+      description: Debezium CDC envelope for PostgreSQL table changes
+      required:
+        - op
+        - ts_ms
+      properties:
+        op:
+          type: string
+          description: "Operation type: c=create, u=update, d=delete"
+          enum:
+            - c
+            - u
+            - d
+        before:
+          oneOf:
+            - $ref: '#/components/schemas/ClaimBase'
+            - type: "null"
+          description: Row state before the change (null for inserts)
+        after:
+          oneOf:
+            - $ref: '#/components/schemas/ClaimBase'
+            - type: "null"
+          description: Row state after the change (null for deletes)
+        ts_ms:
+          type: integer
+          format: int64
+          description: Timestamp of the change in milliseconds since epoch

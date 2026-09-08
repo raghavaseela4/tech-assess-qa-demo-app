@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://demo-app.example.com/schemas/ClaimStatusChangedMessage.json",
+  "type": "object",
+  "description": "Payload for the ClaimStatusChanged domain event",
+  "required": [
+    "eventId",
+    "claimId",
+    "oldStatus",
+    "newStatus",
+    "occurredAt"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "description": "Unique event identifier for idempotency"
+    },
+    "claimId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The claim whose status changed"
+    },
+    "oldStatus": {
+      "type": "string",
+      "description": "The lifecycle status of an insurance claim",
+      "enum": [
+        "SUBMITTED",
+        "UNDER_REVIEW",
+        "APPROVED",
+        "REJECTED",
+        "CLOSED"
+      ]
+    },
+    "newStatus": {
+      "type": "string",
+      "description": "The lifecycle status of an insurance claim",
+      "enum": [
+        "SUBMITTED",
+        "UNDER_REVIEW",
+        "APPROVED",
+        "REJECTED",
+        "CLOSED"
+      ]
+    },
+    "changedBy": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The admin user who changed the status (nullable)"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the status change occurred"
+    }
+  }
+}

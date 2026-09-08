@@ -1,0 +1,93 @@
+spring:
+  application:
+    name: bff-service
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      acks: all
+      retries: 3
+    consumer:
+      group-id: bff-service
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+      auto-commit-interval: 5000
+      max-poll-records: 10
+    listener:
+      ack-mode: record
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/demo-app
+          jwk-set-uri: http://localhost:8180/realms/demo-app/protocol/openid-connect/certs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  influx:
+    metrics:
+      export:
+        enabled: ${INFLUXDB_ENABLED:false}
+        uri: ${INFLUXDB_URL:http://localhost:8086}
+        db: demo-app-metrics
+        step: 10s
+        auto-create-db: true
+        connect-timeout: 10s
+        read-timeout: 10s
+  tracing:
+    sampling:
+      probability: ${TRACING_PROBABILITY:0.0}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
+
+# Claims Service connection - override with CLAIMS_SERVICE_URL env var
+# Set USE_WIREMOCK_CLAIMS=true and CLAIMS_SERVICE_URL=http://localhost:8081 for stubs
+claims-service:
+  url: ${CLAIMS_SERVICE_URL:http://localhost:8080}
+
+# Keycloak Admin Client
+keycloak:
+  admin:
+    server-url: ${KEYCLOAK_URL:http://localhost:8180}
+    realm: master
+    target-realm: demo-app
+    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
+    client-id: admin-cli
+  token:
+    url: ${KEYCLOAK_URL:http://localhost:8180}/realms/demo-app/protocol/openid-connect/token
+    client-id: demo-app-ui
+  logout:
+    url: ${KEYCLOAK_URL:http://localhost:8180}/realms/demo-app/protocol/openid-connect/logout
+  service-account:
+    token-url: ${KEYCLOAK_URL:http://localhost:8180}/realms/demo-app/protocol/openid-connect/token
+    client-id: ${BFF_SERVICE_CLIENT_ID:bff-service}
+    client-secret: ${BFF_SERVICE_CLIENT_SECRET:63+lunw2gODUVo9ehu7yBJfywfD5HG+/qcywh9i6j+E=}
+
+# Application
+app:
+  error-base-url: ${APP_ERROR_BASE_URL:https://api.demo-app.com/errors}
+
+kafka:
+  consumer:
+    auto-startup: ${KAFKA_CONSUMER_AUTO_STARTUP:true}
+
+websocket:
+  allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+
+server:
+  port: 8090

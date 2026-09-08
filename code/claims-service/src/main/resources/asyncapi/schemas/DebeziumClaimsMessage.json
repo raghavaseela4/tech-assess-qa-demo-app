@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://demo-app.example.com/schemas/DebeziumClaimsMessage.json",
+  "type": "object",
+  "description": "Debezium CDC envelope for PostgreSQL table changes",
+  "required": [
+    "op",
+    "ts_ms"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "description": "Operation type: c=create, u=update, d=delete",
+      "enum": [
+        "c",
+        "u",
+        "d"
+      ]
+    },
+    "before": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Shared claim fields reused in CDC after schema and domain events",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "description": "The lifecycle status of an insurance claim",
+              "enum": [
+                "SUBMITTED",
+                "UNDER_REVIEW",
+                "APPROVED",
+                "REJECTED",
+                "CLOSED"
+              ]
+            },
+            "claim_amount": {
+              "type": "number"
+            },
+            "incident_date": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Row state before the change (null for inserts)"
+    },
+    "after": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Shared claim fields reused in CDC after schema and domain events",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "description": "The lifecycle status of an insurance claim",
+              "enum": [
+                "SUBMITTED",
+                "UNDER_REVIEW",
+                "APPROVED",
+                "REJECTED",
+                "CLOSED"
+              ]
+            },
+            "claim_amount": {
+              "type": "number"
+            },
+            "incident_date": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Row state after the change (null for deletes)"
+    },
+    "ts_ms": {
+      "type": "integer",
+      "format": "int64",
+      "description": "Timestamp of the change in milliseconds since epoch"
+    }
+  }
+}

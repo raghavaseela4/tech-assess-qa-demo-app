@@ -1,0 +1,226 @@
+asyncapi: 3.0.0
+info:
+  title: Claim Events Consumer API
+  version: 0.0.1-SNAPSHOT
+  description: |
+    AsyncAPI specification for the BFF Service's Kafka consumers.
+
+    The BFF consumes domain events from the `claim-events` topic and CDC events
+    from the `cdc.demo-app.public.claims` topic. Both event streams are broadcast
+    to connected WebSocket clients for real-time UI updates.
+
+    Consumer group: `bff-websocket-consumer-group`
+
+defaultContentType: application/json
+
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development (bare metal or IDE)
+  docker:
+    host: kafka:9092
+    protocol: kafka
+    description: Docker Compose environment
+
+channels:
+  claimEvents:
+    address: claim-events
+    description: |
+      Domain events published by the Claims Service.
+      The BFF consumes these to broadcast real-time updates via WebSocket.
+    messages:
+      ClaimSubmittedMessage:
+        $ref: '#/components/messages/ClaimSubmittedMessage'
+      ClaimStatusChangedMessage:
+        $ref: '#/components/messages/ClaimStatusChangedMessage'
+
+  cdcClaims:
+    address: cdc.demo-app.public.claims
+    description: |
+      Debezium CDC events from the claims PostgreSQL table.
+      The BFF consumes these as a secondary real-time update channel.
+    messages:
+      DebeziumClaimsMessage:
+        $ref: '#/components/messages/DebeziumClaimsMessage'
+
+operations:
+  consumeClaimEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/claimEvents'
+    summary: Consume domain events for WebSocket broadcasting
+    bindings:
+      kafka:
+        groupId:
+          type: string
+          enum:
+            - bff-websocket-consumer-group
+
+  consumeCdcClaims:
+    action: receive
+    channel:
+      $ref: '#/channels/cdcClaims'
+    summary: Consume CDC events for WebSocket broadcasting
+    bindings:
+      kafka:
+        groupId:
+          type: string
+          enum:
+            - bff-websocket-consumer-group
+
+components:
+  messages:
+    ClaimSubmittedMessage:
+      name: ClaimSubmittedMessage
+      title: Claim Submitted
+      contentType: application/json
+      description: Domain event received when a claimant submits a new claim.
+      payload:
+        $ref: '#/components/schemas/ClaimSubmittedPayload'
+
+    ClaimStatusChangedMessage:
+      name: ClaimStatusChangedMessage
+      title: Claim Status Changed
+      contentType: application/json
+      description: Domain event received when a claim status transitions.
+      payload:
+        $ref: '#/components/schemas/ClaimStatusChangedPayload'
+
+    DebeziumClaimsMessage:
+      name: DebeziumClaimsMessage
+      title: Debezium CDC Claims Change
+      contentType: application/json
+      description: Debezium CDC envelope for claims table changes.
+      payload:
+        $ref: '#/components/schemas/DebeziumEnvelope'
+
+  schemas:
+    ClaimStatus:
+      type: string
+      description: The lifecycle status of an insurance claim
+      enum:
+        - SUBMITTED
+        - UNDER_REVIEW
+        - APPROVED
+        - REJECTED
+        - CLOSED
+
+    ClaimSubmittedPayload:
+      type: object
+      description: Payload for the ClaimSubmitted domain event
+      required:
+        - eventId
+        - claimId
+        - userId
+        - incidentDate
+        - claimAmount
+        - occurredAt
+      properties:
+        eventId:
+          type: string
+          description: Unique event identifier for idempotency
+        claimId:
+          type: string
+          format: uuid
+          description: The unique identifier of the submitted claim
+        userId:
+          type: string
+          format: uuid
+          description: The user who submitted the claim
+        incidentDate:
+          type: string
+          format: date
+          description: The date the incident occurred
+        claimAmount:
+          type: number
+          description: The monetary amount being claimed
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred
+
+    ClaimStatusChangedPayload:
+      type: object
+      description: Payload for the ClaimStatusChanged domain event
+      required:
+        - eventId
+        - claimId
+        - oldStatus
+        - newStatus
+        - occurredAt
+      properties:
+        eventId:
+          type: string
+          description: Unique event identifier for idempotency
+        claimId:
+          type: string
+          format: uuid
+          description: The claim whose status changed
+        oldStatus:
+          $ref: '#/components/schemas/ClaimStatus'
+        newStatus:
+          $ref: '#/components/schemas/ClaimStatus'
+        changedBy:
+          type: string
+          format: uuid
+          description: The admin user who changed the status (nullable)
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the status change occurred
+
+    ClaimBase:
+      type: object
+      description: Shared claim fields reused in CDC after schema and domain events
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ClaimStatus'
+        claim_amount:
+          type: number
+        incident_date:
+          type: string
+          format: date
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DebeziumEnvelope:
+      type: object
+      description: Debezium CDC envelope for PostgreSQL table changes
+      required:
+        - op
+        - ts_ms
+      properties:
+        op:
+          type: string
+          description: "Operation type: c=create, u=update, d=delete"
+          enum:
+            - c
+            - u
+            - d
+        before:
+          oneOf:
+            - $ref: '#/components/schemas/ClaimBase'
+            - type: "null"
+          description: Row state before the change (null for inserts)
+        after:
+          oneOf:
+            - $ref: '#/components/schemas/ClaimBase'
+            - type: "null"
+          description: Row state after the change (null for deletes)
+        ts_ms:
+          type: integer
+          format: int64
+          description: Timestamp of the change in milliseconds since epoch

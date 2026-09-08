@@ -1,0 +1,95 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-claims-table
+      author: developer
+      changes:
+        - createTable:
+            tableName: claims
+            columns:
+              - column:
+                  name: claim_id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_claims
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: incident_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: incident_location
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: claim_amount
+                  type: DECIMAL(12,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  defaultValue: 'SUBMITTED'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            constraintName: fk_claims_user_id
+            baseTableName: claims
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: user_id
+            onDelete: RESTRICT
+            onUpdate: CASCADE
+
+        - createIndex:
+            indexName: idx_claims_user_id
+            tableName: claims
+            columns:
+              - column:
+                  name: user_id
+
+        - createIndex:
+            indexName: idx_claims_status
+            tableName: claims
+            columns:
+              - column:
+                  name: status
+
+        - createIndex:
+            indexName: idx_claims_user_id_created_at
+            tableName: claims
+            columns:
+              - column:
+                  name: user_id
+              - column:
+                  name: created_at
+                  descending: true
+
+      rollback:
+        - dropTable:
+            tableName: claims

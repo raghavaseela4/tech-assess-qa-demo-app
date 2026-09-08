@@ -1,0 +1,203 @@
+@import "tailwindcss";
+
+/* ============================================
+   SEMANTIC DESIGN TOKEN SYSTEM
+   ============================================
+   Theme presets override CSS custom properties.
+   Apply theme class on <html> (e.g., theme-default, theme-corporate, theme-warm).
+   Dark mode: add .dark class to <html>.
+   ============================================ */
+
+/* --- Default Theme (Blue) --- */
+:root,
+.theme-default {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-active: #1e40af;
+  --color-on-primary: #ffffff;
+  --color-surface: #f9fafb;
+  --color-surface-card: #ffffff;
+  --color-border: #e5e7eb;
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+  --color-error: #dc2626;
+  --color-error-bg: #fef2f2;
+  --color-success: #16a34a;
+  --color-input-bg: #ffffff;
+  --color-input-border: #d1d5db;
+  --color-input-focus: #2563eb;
+  --color-input-disabled-bg: #f3f4f6;
+  --color-button-secondary-bg: #f3f4f6;
+  --color-button-secondary-hover: #e5e7eb;
+  --color-button-secondary-text: #374151;
+  --color-link: #2563eb;
+  --color-link-hover: #3b82f6;
+  --color-shadow: rgba(0, 0, 0, 0.1);
+}
+
+/* --- Corporate Theme (Teal) --- */
+.theme-corporate {
+  --color-primary: #0d9488;
+  --color-primary-hover: #0f766e;
+  --color-primary-active: #115e59;
+  --color-on-primary: #ffffff;
+  --color-surface: #f0fdfa;
+  --color-surface-card: #ffffff;
+  --color-border: #99f6e4;
+  --color-text-primary: #134e4a;
+  --color-text-secondary: #2d6a65;
+  --color-text-muted: #5eead4;
+  --color-error: #dc2626;
+  --color-error-bg: #fef2f2;
+  --color-success: #16a34a;
+  --color-input-bg: #ffffff;
+  --color-input-border: #99f6e4;
+  --color-input-focus: #0d9488;
+  --color-input-disabled-bg: #f0fdfa;
+  --color-button-secondary-bg: #ccfbf1;
+  --color-button-secondary-hover: #99f6e4;
+  --color-button-secondary-text: #134e4a;
+  --color-link: #0d9488;
+  --color-link-hover: #14b8a6;
+  --color-shadow: rgba(13, 148, 136, 0.1);
+}
+
+/* --- Warm Theme (Amber) --- */
+.theme-warm {
+  --color-primary: #d97706;
+  --color-primary-hover: #b45309;
+  --color-primary-active: #92400e;
+  --color-on-primary: #ffffff;
+  --color-surface: #fffbeb;
+  --color-surface-card: #ffffff;
+  --color-border: #fde68a;
+  --color-text-primary: #78350f;
+  --color-text-secondary: #92400e;
+  --color-text-muted: #d97706;
+  --color-error: #dc2626;
+  --color-error-bg: #fef2f2;
+  --color-success: #16a34a;
+  --color-input-bg: #fffbeb;
+  --color-input-border: #fde68a;
+  --color-input-focus: #d97706;
+  --color-input-disabled-bg: #fef3c7;
+  --color-button-secondary-bg: #fef3c7;
+  --color-button-secondary-hover: #fde68a;
+  --color-button-secondary-text: #78350f;
+  --color-link: #d97706;
+  --color-link-hover: #f59e0b;
+  --color-shadow: rgba(217, 119, 6, 0.1);
+}
+
+/* --- Dark Mode Variants --- */
+.dark {
+  --color-surface: #111827;
+  --color-surface-card: #1f2937;
+  --color-border: #374151;
+  --color-text-primary: #f9fafb;
+  --color-text-secondary: #d1d5db;
+  --color-text-muted: #6b7280;
+  --color-error-bg: #451a1a;
+  --color-input-bg: #1f2937;
+  --color-input-border: #4b5563;
+  --color-input-disabled-bg: #374151;
+  --color-button-secondary-bg: #374151;
+  --color-button-secondary-hover: #4b5563;
+  --color-button-secondary-text: #e5e7eb;
+  --color-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark + Default: blue adjustments */
+.dark.theme-default,
+.dark:not([class*="theme-"]) {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #60a5fa;
+  --color-primary-active: #2563eb;
+  --color-on-primary: #ffffff;
+  --color-link: #60a5fa;
+  --color-link-hover: #93c5fd;
+  --color-input-focus: #3b82f6;
+}
+
+/* Dark + Corporate: teal adjustments */
+.dark.theme-corporate {
+  --color-primary: #14b8a6;
+  --color-primary-hover: #2dd4bf;
+  --color-primary-active: #0d9488;
+  --color-on-primary: #ffffff;
+  --color-link: #2dd4bf;
+  --color-link-hover: #5eead4;
+  --color-input-focus: #14b8a6;
+}
+
+/* Dark + Warm: amber adjustments */
+.dark.theme-warm {
+  --color-primary: #f59e0b;
+  --color-primary-hover: #fbbf24;
+  --color-primary-active: #d97706;
+  --color-on-primary: #000000;
+  --color-link: #fbbf24;
+  --color-link-hover: #fde68a;
+  --color-input-focus: #f59e0b;
+}
+
+/* ============================================
+   TAILWIND v4 @theme REGISTRATION
+   Maps CSS custom properties to Tailwind utilities.
+   ============================================ */
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-active: var(--color-primary-active);
+  --color-on-primary: var(--color-on-primary);
+  --color-surface: var(--color-surface);
+  --color-surface-card: var(--color-surface-card);
+  --color-border: var(--color-border);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-error: var(--color-error);
+  --color-error-bg: var(--color-error-bg);
+  --color-success: var(--color-success);
+  --color-input-bg: var(--color-input-bg);
+  --color-input-border: var(--color-input-border);
+  --color-input-focus: var(--color-input-focus);
+  --color-input-disabled-bg: var(--color-input-disabled-bg);
+  --color-button-secondary-bg: var(--color-button-secondary-bg);
+  --color-button-secondary-hover: var(--color-button-secondary-hover);
+  --color-button-secondary-text: var(--color-button-secondary-text);
+  --color-link: var(--color-link);
+  --color-link-hover: var(--color-link-hover);
+  --color-shadow: var(--color-shadow);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* ============================================
+   THEME PICKER SWATCH COLORS
+   Use CSS custom properties for theme swatches
+   ============================================ */
+:root {
+  --swatch-default: #2563eb;
+  --swatch-corporate: #0d9488;
+  --swatch-warm: #d97706;
+}
+
+.theme-swatch-default {
+  background-color: var(--swatch-default);
+}
+
+.theme-swatch-corporate {
+  background-color: var(--swatch-corporate);
+}
+
+.theme-swatch-warm {
+  background-color: var(--swatch-warm);
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: Arial, Helvetica, sans-serif;
+}

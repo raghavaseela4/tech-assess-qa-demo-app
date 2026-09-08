@@ -1,0 +1,160 @@
+<?xml version="1.0"?>
+<!--
+  PMD Ruleset for Demo App
+
+  Purpose: Define code quality rules for Spring Boot 4.x / Java 21 project.
+  Compatible with PMD 7.x (rule names updated from PMD 6.x)
+
+  Reference: https://docs.pmd-code.org/latest/pmd_rules_java.html
+-->
+<ruleset name="Demo App PMD Ruleset"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
+                             https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        PMD ruleset for Demo App - Spring Boot 4.x / Java 21.
+        Enforces code quality while respecting Lombok, Spring patterns, and Clean Architecture.
+    </description>
+
+    <!-- ========================================
+         EXCLUDE GENERATED CODE
+         ======================================== -->
+    <exclude-pattern>.*/generated/.*</exclude-pattern>
+    <exclude-pattern>.*/generated-sources/.*</exclude-pattern>
+
+    <!-- Exclude Spring Boot main Application class from UseUtilityClass -->
+    <exclude-pattern>.*Application\.java</exclude-pattern>
+
+    <!-- Exclude TestEventController (Spring dev controller named Test* for dev, not a test class) -->
+    <exclude-pattern>.*TestEventController\.java</exclude-pattern>
+
+    <!-- ========================================
+         BEST PRACTICES
+         ======================================== -->
+    <rule ref="category/java/bestpractices.xml">
+        <!-- Lombok handles logging guards -->
+        <exclude name="GuardLogStatement"/>
+    </rule>
+
+    <!-- ========================================
+         CODE STYLE
+         ======================================== -->
+    <rule ref="category/java/codestyle.xml">
+        <!-- Records and Lombok handle constructors -->
+        <exclude name="AtLeastOneConstructor"/>
+        <!-- Default access is intentional in package-private classes -->
+        <exclude name="CommentDefaultAccessModifier"/>
+        <!-- Multiple returns improve readability with guard clauses -->
+        <exclude name="OnlyOneReturn"/>
+        <!-- Long descriptive names are good -->
+        <exclude name="LongVariable"/>
+        <!-- Short names OK for lambdas and loops -->
+        <exclude name="ShortVariable"/>
+        <!-- Short method names OK for builders -->
+        <exclude name="ShortMethodName"/>
+        <!-- Unnecessary modifiers in interfaces -->
+        <exclude name="UnnecessaryModifier"/>
+        <!-- Local variable could be final - too noisy -->
+        <exclude name="LocalVariableCouldBeFinal"/>
+        <!-- Method argument could be final - too noisy -->
+        <exclude name="MethodArgumentCouldBeFinal"/>
+        <!-- Calling super() is implicit -->
+        <exclude name="CallSuperInConstructor"/>
+        <!-- Confusing ternary is subjective -->
+        <exclude name="ConfusingTernary"/>
+        <!-- Premature declaration is fine -->
+        <exclude name="PrematureDeclaration"/>
+        <!-- Use explicit types for readability -->
+        <exclude name="UseExplicitTypes"/>
+        <!-- Unnecessary boxing - sometimes needed for API compatibility -->
+        <exclude name="UnnecessaryBoxing"/>
+        <!-- User is a clear, well-known domain name -->
+        <exclude name="ShortClassName"/>
+    </rule>
+
+    <!-- ========================================
+         DESIGN
+         ======================================== -->
+    <rule ref="category/java/design.xml">
+        <!-- Law of Demeter too strict for Spring dependency injection -->
+        <exclude name="LawOfDemeter"/>
+        <!-- Coupling rules too strict for Clean Architecture adapters -->
+        <exclude name="LoosePackageCoupling"/>
+        <exclude name="CouplingBetweenObjects"/>
+        <!-- Data classes are valid domain models -->
+        <exclude name="DataClass"/>
+        <!-- Signature declare throws is fine -->
+        <exclude name="SignatureDeclareThrowsException"/>
+        <!-- Cognitive complexity - Checkstyle handles this -->
+        <exclude name="CognitiveComplexity"/>
+        <!-- Too many methods - configuration classes often have many -->
+        <exclude name="TooManyMethods"/>
+        <!-- God class - too strict for Spring controllers -->
+        <exclude name="GodClass"/>
+        <!-- Spring Boot main class requires public no-arg constructor, cannot be utility class -->
+        <exclude name="UseUtilityClass"/>
+        <!-- Redis cache adapter requires broad exception catch for graceful degradation -->
+        <exclude name="AvoidCatchingGenericException"/>
+    </rule>
+
+    <!-- Raise CyclomaticComplexity threshold to accommodate domain constructors -->
+    <rule ref="category/java/design.xml/CyclomaticComplexity">
+        <properties>
+            <property name="methodReportLevel" value="15"/>
+        </properties>
+    </rule>
+
+    <!-- Customize excessive imports threshold -->
+    <rule ref="category/java/design.xml/ExcessiveImports">
+        <properties>
+            <property name="minimum" value="50"/>
+        </properties>
+    </rule>
+
+    <!-- ========================================
+         ERROR PRONE
+         ======================================== -->
+    <rule ref="category/java/errorprone.xml">
+        <!-- Null assignment is fine for clearing references -->
+        <exclude name="NullAssignment"/>
+        <!-- Avoid literals in conditionals - too strict -->
+        <exclude name="AvoidLiteralsInIfCondition"/>
+        <!-- Missing serial version UID - not using serialization -->
+        <exclude name="MissingSerialVersionUID"/>
+        <!-- Avoid field name matching method name - Lombok builders -->
+        <exclude name="AvoidFieldNameMatchingMethodName"/>
+        <!-- Compare objects with equals - records use == safely -->
+        <exclude name="CompareObjectsWithEquals"/>
+        <!-- Too many false positives with modern Java -->
+        <exclude name="AvoidDuplicateLiterals"/>
+    </rule>
+
+    <!-- ========================================
+         MULTITHREADING
+         ======================================== -->
+    <rule ref="category/java/multithreading.xml">
+        <!-- Spring manages thread safety -->
+        <exclude name="UseConcurrentHashMap"/>
+        <!-- Double checked locking with volatile is valid in Java 5+ -->
+        <exclude name="DoubleCheckedLocking"/>
+    </rule>
+
+    <!-- ========================================
+         PERFORMANCE
+         ======================================== -->
+    <rule ref="category/java/performance.xml">
+        <!-- Avoid instantiating objects in loops - sometimes necessary -->
+        <exclude name="AvoidInstantiatingObjectsInLoops"/>
+        <!-- Consecutive literal appends - readability over micro-optimization -->
+        <exclude name="ConsecutiveLiteralAppends"/>
+        <exclude name="InefficientStringBuffering"/>
+    </rule>
+
+    <!-- ========================================
+         SECURITY
+         ======================================== -->
+    <rule ref="category/java/security.xml"/>
+
+</ruleset>

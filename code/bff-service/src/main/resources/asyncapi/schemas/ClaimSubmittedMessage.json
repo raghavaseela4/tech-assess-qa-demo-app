@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://demo-app.example.com/schemas/ClaimSubmittedMessage.json",
+  "type": "object",
+  "description": "Payload for the ClaimSubmitted domain event",
+  "required": [
+    "eventId",
+    "claimId",
+    "userId",
+    "incidentDate",
+    "claimAmount",
+    "occurredAt"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "description": "Unique event identifier for idempotency"
+    },
+    "claimId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The unique identifier of the submitted claim"
+    },
+    "userId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The user who submitted the claim"
+    },
+    "incidentDate": {
+      "type": "string",
+      "format": "date",
+      "description": "The date the incident occurred"
+    },
+    "claimAmount": {
+      "type": "number",
+      "description": "The monetary amount being claimed"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the event occurred"
+    }
+  }
+}

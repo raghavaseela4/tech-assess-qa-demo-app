@@ -1,0 +1,77 @@
+# Application services — claims-service, bff-service, UI
+# Requires infrastructure to be running first: docker-compose.infra.yml
+#
+# Usage:
+#   docker compose -f docker-compose.apps.yml up --build
+#   docker compose -f docker-compose.apps.yml down
+
+services:
+
+  claims-service:
+    build:
+      context: ./code/claims-service
+    container_name: demo-claims-service
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/demo_app
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/demo-app
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/demo-app/protocol/openid-connect/certs
+      # Set to true when running docker-compose.cdc.yml alongside this stack
+      APP_EVENTS_CDC_ENABLED: "false"
+    networks:
+      - demo-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  bff-service:
+    build:
+      context: ./code/bff-service
+    container_name: demo-bff-service
+    ports:
+      - "8090:8090"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_DATA_REDIS_HOST: redis
+      CLAIMS_SERVICE_URL: http://claims-service:8080
+      KEYCLOAK_URL: http://keycloak:8080
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/demo-app
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/demo-app/protocol/openid-connect/certs
+      WEBSOCKET_ALLOWED_ORIGINS: http://localhost:3001,http://localhost:3000
+    depends_on:
+      claims-service:
+        condition: service_healthy
+    networks:
+      - demo-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:8090/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  ui:
+    build:
+      context: ./code/demo-app-ui
+    container_name: demo-ui
+    ports:
+      - "3001:3001"
+    environment:
+      NEXT_PUBLIC_BFF_URL: http://localhost:8090
+      BFF_INTERNAL_URL: http://bff-service:8090
+    depends_on:
+      bff-service:
+        condition: service_healthy
+    networks:
+      - demo-network
+
+networks:
+  demo-network:
+    external: true
+    name: demo-network

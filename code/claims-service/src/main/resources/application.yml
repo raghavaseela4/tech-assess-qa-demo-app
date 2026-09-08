@@ -1,0 +1,89 @@
+spring:
+  application:
+    name: claims-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/demo_app
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        show_sql: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      acks: all
+      retries: 3
+    consumer:
+      group-id: claims-service
+      auto-offset-reset: earliest
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/demo-app
+          jwk-set-uri: http://localhost:8180/realms/demo-app/protocol/openid-connect/certs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  influx:
+    metrics:
+      export:
+        enabled: ${INFLUXDB_ENABLED:false}
+        uri: ${INFLUXDB_URL:http://localhost:8086}
+        db: demo-app-metrics
+        step: 10s
+        auto-create-db: true
+        connect-timeout: 10s
+        read-timeout: 10s
+  tracing:
+    sampling:
+      probability: ${TRACING_PROBABILITY:0.0}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
+
+datasource-proxy:
+  query:
+    enable-logging: AUTO
+    log-level: INFO
+  slow-query:
+    threshold: 200
+    log-level: WARN
+
+kafka:
+  producer:
+    schema-validation:
+      enabled: false
+
+app:
+  error-base-url: https://api.demo-app.com/errors
+  events:
+    # true  = rely on Debezium CDC (requires Debezium connector healthy)
+    # false = publish domain events directly to Kafka (fallback if CDC unavailable)
+    cdc-enabled: true
+
+server:
+  port: 8080

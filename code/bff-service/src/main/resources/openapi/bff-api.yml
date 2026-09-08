@@ -1,0 +1,856 @@
+openapi: 3.0.3
+info:
+  title: Demo App BFF API
+  description: |
+    Backend-for-Frontend API for the Demo Insurance Claims Application.
+    This is the single source of truth for the UI ↔ BFF contract.
+  version: 1.0.0
+  contact:
+    name: Demo App Team
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints (signup, login, logout)
+  - name: Claims
+    description: Claim submission and retrieval for claimants
+  - name: Admin Dashboard
+    description: Admin dashboard statistics and claims management
+
+paths:
+  # =========================================================================
+  # Authentication Endpoints
+  # =========================================================================
+  /api/auth/signup:
+    post:
+      tags:
+        - Authentication
+      operationId: signup
+      summary: Register a new user account
+      description: Creates a new user account with the provided email, password, and name.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+            example:
+              email: jane.doe@example.com
+              password: SecurePass123!
+              name: Jane Doe
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                userId: "550e8400-e29b-41d4-a716-446655440000"
+                email: jane.doe@example.com
+                name: Jane Doe
+                role: CLAIMANT
+                createdAt: "2026-02-17T10:30:00.000Z"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "https://api.demo-app.com/errors/validation-error"
+                title: Validation Error
+                status: 400
+                detail: "Email format is invalid"
+                instance: "/api/auth/signup"
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "https://api.demo-app.com/errors/duplicate-entity"
+                title: Conflict
+                status: 409
+                detail: "A user with this email already exists"
+                instance: "/api/auth/signup"
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      operationId: login
+      summary: Authenticate a user
+      description: |
+        Authenticates a user with email and password.
+        On success, returns a 200 with the authentication token set as an HTTP-only cookie.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: jane.doe@example.com
+              password: SecurePass123!
+      responses:
+        '200':
+          description: Login successful. Token returned in HTTP-only cookie.
+          headers:
+            Set-Cookie:
+              description: HTTP-only cookie containing the authentication token
+              schema:
+                type: string
+                example: "AUTH_TOKEN=eyJhbGciOi...; Path=/; HttpOnly; Secure; SameSite=Strict"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                userId: "550e8400-e29b-41d4-a716-446655440000"
+                email: jane.doe@example.com
+                name: Jane Doe
+                role: CLAIMANT
+                createdAt: "2026-02-17T10:30:00.000Z"
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "https://api.demo-app.com/errors/authentication-error"
+                title: Unauthorized
+                status: 401
+                detail: "Invalid email or password"
+                instance: "/api/auth/login"
+
+  /api/auth/refresh:
+    post:
+      tags:
+        - Authentication
+      operationId: refresh
+      summary: Refresh authentication tokens
+      description: |
+        Uses the refresh token cookie to obtain new access and refresh tokens.
+        Both tokens are returned as HTTP-only cookies.
+      security: []
+      responses:
+        '204':
+          description: Tokens refreshed successfully. New tokens set in HTTP-only cookies.
+          headers:
+            Set-Cookie:
+              description: HTTP-only cookies containing new access and refresh tokens
+              schema:
+                type: string
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      operationId: logout
+      summary: Log out the current user
+      description: Invalidates the current user's session and clears the authentication cookie.
+      responses:
+        '204':
+          description: Logout successful. Authentication cookie cleared.
+
+  # =========================================================================
+  # Claim Endpoints
+  # =========================================================================
+  /api/claims:
+    post:
+      tags:
+        - Claims
+      operationId: submitClaim
+      summary: Submit a new insurance claim
+      description: Creates a new insurance claim for the authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitClaimRequest'
+            example:
+              incidentDate: "2026-02-15"
+              description: "Water damage to basement due to pipe burst"
+      responses:
+        '201':
+          description: Claim submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+              example:
+                claimId: "660e8400-e29b-41d4-a716-446655440001"
+                userId: "550e8400-e29b-41d4-a716-446655440000"
+                incidentDate: "2026-02-15"
+                description: "Water damage to basement due to pipe burst"
+                status: SUBMITTED
+                createdAt: "2026-02-17T10:30:00.000Z"
+                updatedAt: "2026-02-17T10:30:00.000Z"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "https://api.demo-app.com/errors/validation-error"
+                title: Validation Error
+                status: 400
+                detail: "Incident date cannot be in the future"
+                instance: "/api/claims"
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+    get:
+      tags:
+        - Claims
+      operationId: listClaims
+      summary: List the authenticated user's claims
+      description: Returns all claims belonging to the currently authenticated user.
+      responses:
+        '200':
+          description: List of user's claims
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClaimSummaryResponse'
+              example:
+                - claimId: "660e8400-e29b-41d4-a716-446655440001"
+                  incidentDate: "2026-02-15"
+                  description: "Water damage to basement due to pipe burst"
+                  claimAmount: 5000.00
+                  status: SUBMITTED
+                  createdAt: "2026-02-17T10:30:00.000Z"
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/claims/{claimId}:
+    get:
+      tags:
+        - Claims
+      operationId: getClaim
+      summary: Get details of a specific claim
+      description: Returns the details of a claim by its ID. Users can only access their own claims.
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          description: The unique identifier of the claim
+          schema:
+            type: string
+            format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440001"
+      responses:
+        '200':
+          description: Claim details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: Forbidden - claim belongs to different user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "https://api.demo-app.com/errors/forbidden"
+                title: Forbidden
+                status: 403
+                detail: "Not authorized to access this claim"
+                instance: "/api/claims/660e8400-e29b-41d4-a716-446655440001"
+        '404':
+          description: Claim not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "https://api.demo-app.com/errors/not-found"
+                title: Not Found
+                status: 404
+                detail: "Claim not found"
+                instance: "/api/claims/660e8400-e29b-41d4-a716-446655440001"
+
+  # =========================================================================
+  # Admin Dashboard Endpoints
+  # =========================================================================
+  /api/admin/dashboard/stats:
+    get:
+      tags:
+        - Admin Dashboard
+      operationId: getDashboardStats
+      summary: Get admin dashboard statistics
+      description: |
+        Returns aggregated statistics for the admin dashboard.
+        Results are cached in Redis. Use bypassCache=true to force a fresh calculation.
+      parameters:
+        - name: bypassCache
+          in: query
+          required: false
+          description: When true, bypasses the Redis cache and fetches fresh data
+          schema:
+            type: boolean
+            default: false
+          example: false
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStatsResponse'
+              example:
+                totalUsers: 50
+                totalClaims: 142
+                claimsByStatus:
+                  SUBMITTED: 45
+                  UNDER_REVIEW: 32
+                  APPROVED: 50
+                  REJECTED: 15
+                  CLOSED: 0
+                cacheHit: true
+                queryTimeMs: 12
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: Insufficient permissions (admin role required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "https://api.demo-app.com/errors/forbidden"
+                title: Forbidden
+                status: 403
+                detail: "Admin role required"
+                instance: "/api/admin/dashboard/stats"
+
+  /api/admin/dashboard/flush-cache:
+    post:
+      tags:
+        - Admin Dashboard
+      operationId: flushDashboardCache
+      summary: Flush dashboard statistics cache
+      description: Manually evicts the dashboard statistics cache. Requires admin role.
+      responses:
+        '204':
+          description: Cache flushed successfully
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: Insufficient permissions (admin role required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/admin/users:
+    get:
+      tags:
+        - Admin Dashboard
+      operationId: listAllUsers
+      summary: List all users (admin)
+      description: Returns all users in the system. Requires admin role.
+      responses:
+        '200':
+          description: List of all users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponse'
+              example:
+                - userId: "550e8400-e29b-41d4-a716-446655440000"
+                  email: admin@example.com
+                  name: Admin User
+                  role: ADMIN
+                  createdAt: "2026-02-17T10:30:00.000Z"
+                - userId: "660e8400-e29b-41d4-a716-446655440001"
+                  email: jane.doe@example.com
+                  name: Jane Doe
+                  role: CLAIMANT
+                  createdAt: "2026-02-17T11:00:00.000Z"
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: Insufficient permissions (admin role required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/admin/claims:
+    get:
+      tags:
+        - Admin Dashboard
+      operationId: listAllClaims
+      summary: List all claims (admin)
+      description: Returns all claims in the system. Supports filtering by status and userId.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filter claims by status
+          schema:
+            $ref: '#/components/schemas/ClaimStatus'
+          example: SUBMITTED
+        - name: userId
+          in: query
+          required: false
+          description: Filter claims by user ID
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: List of all claims
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClaimResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: Insufficient permissions (admin role required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/admin/claims/{claimId}/status:
+    patch:
+      tags:
+        - Admin Dashboard
+      operationId: updateClaimStatus
+      summary: Update the status of a claim
+      description: Allows an admin to update the status of a specific claim.
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          description: The unique identifier of the claim
+          schema:
+            type: string
+            format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClaimStatusRequest'
+            example:
+              newStatus: APPROVED
+      responses:
+        '200':
+          description: Claim status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+        '400':
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "https://api.demo-app.com/errors/validation-error"
+                title: Validation Error
+                status: 400
+                detail: "Cannot transition from REJECTED to APPROVED"
+                instance: "/api/admin/claims/660e8400-e29b-41d4-a716-446655440001/status"
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: Insufficient permissions (admin role required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          description: Claim not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+# =============================================================================
+# Components
+# =============================================================================
+components:
+  schemas:
+    # =========================================================================
+    # Authentication Schemas
+    # =========================================================================
+    SignupRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: jane.doe@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: User's password (minimum 8 characters)
+          example: SecurePass123!
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: User's full name
+          example: Jane Doe
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: jane.doe@example.com
+        password:
+          type: string
+          format: password
+          description: User's password
+          example: SecurePass123!
+
+    UserResponse:
+      type: object
+      required:
+        - userId
+        - email
+        - name
+        - role
+        - createdAt
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Unique user identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: jane.doe@example.com
+        name:
+          type: string
+          description: User's full name
+          example: Jane Doe
+        role:
+          $ref: '#/components/schemas/UserRole'
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp (ISO 8601)
+          example: "2026-02-17T10:30:00.000Z"
+
+    UserRole:
+      type: string
+      enum:
+        - CLAIMANT
+        - ADMIN
+      description: User role for authorization
+
+    # =========================================================================
+    # Claim Schemas
+    # =========================================================================
+    SubmitClaimRequest:
+      type: object
+      required:
+        - incidentDate
+        - incidentLocation
+        - description
+        - claimAmount
+      properties:
+        incidentDate:
+          type: string
+          format: date
+          description: Date of the incident (ISO 8601 date)
+          example: "2026-02-15"
+        incidentLocation:
+          type: string
+          minLength: 5
+          maxLength: 200
+          description: Location where the incident occurred
+          example: "123 Main St, Springfield, IL"
+        description:
+          type: string
+          minLength: 10
+          maxLength: 1000
+          description: Detailed description of the incident
+          example: "Water damage to basement due to pipe burst"
+        claimAmount:
+          type: number
+          format: double
+          minimum: 0.01
+          maximum: 1000000
+          description: Claimed amount in USD
+          example: 5000.00
+
+    ClaimResponse:
+      type: object
+      required:
+        - claimId
+        - userId
+        - incidentDate
+        - incidentLocation
+        - description
+        - claimAmount
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        claimId:
+          type: string
+          format: uuid
+          description: Unique claim identifier
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        userId:
+          type: string
+          format: uuid
+          description: ID of the user who submitted the claim
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        incidentDate:
+          type: string
+          format: date
+          description: Date of the incident
+          example: "2026-02-15"
+        incidentLocation:
+          type: string
+          description: Location where the incident occurred
+          example: "123 Main St, Springfield, IL"
+        description:
+          type: string
+          description: Description of the incident
+          example: "Water damage to basement due to pipe burst"
+        claimAmount:
+          type: number
+          format: double
+          description: Claimed amount in USD
+          example: 5000.00
+        status:
+          $ref: '#/components/schemas/ClaimStatus'
+        createdAt:
+          type: string
+          format: date-time
+          description: Claim creation timestamp
+          example: "2026-02-17T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2026-02-17T10:30:00.000Z"
+
+    ClaimSummaryResponse:
+      type: object
+      required:
+        - claimId
+        - incidentDate
+        - description
+        - claimAmount
+        - status
+        - createdAt
+      properties:
+        claimId:
+          type: string
+          format: uuid
+          description: Unique claim identifier
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        incidentDate:
+          type: string
+          format: date
+          description: Date of the incident
+          example: "2026-02-15"
+        description:
+          type: string
+          maxLength: 100
+          description: Truncated description (first 100 characters)
+          example: "Water damage to basement due to pipe burst"
+        claimAmount:
+          type: number
+          format: double
+          description: Claimed amount in USD
+          example: 5000.00
+        status:
+          $ref: '#/components/schemas/ClaimStatus'
+        createdAt:
+          type: string
+          format: date-time
+          description: Claim creation timestamp
+          example: "2026-02-17T10:30:00.000Z"
+
+    ClaimStatus:
+      type: string
+      enum:
+        - SUBMITTED
+        - UNDER_REVIEW
+        - APPROVED
+        - REJECTED
+        - CLOSED
+      description: Current status of the claim
+
+    UpdateClaimStatusRequest:
+      type: object
+      required:
+        - newStatus
+      properties:
+        newStatus:
+          $ref: '#/components/schemas/ClaimStatus'
+
+    # =========================================================================
+    # Admin Dashboard Schemas
+    # =========================================================================
+    DashboardStatsResponse:
+      type: object
+      required:
+        - totalUsers
+        - totalClaims
+        - claimsByStatus
+        - cacheHit
+        - queryTimeMs
+      properties:
+        totalUsers:
+          type: integer
+          description: Total number of users in the system
+          example: 50
+        totalClaims:
+          type: integer
+          description: Total number of claims in the system
+          example: 142
+        claimsByStatus:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Count of claims grouped by status
+          example:
+            SUBMITTED: 45
+            UNDER_REVIEW: 32
+            APPROVED: 50
+            REJECTED: 15
+            CLOSED: 0
+        cacheHit:
+          type: boolean
+          description: Whether data was retrieved from Redis cache
+          example: true
+        queryTimeMs:
+          type: integer
+          description: Time taken to fetch data in milliseconds
+          example: 12
+
+    # =========================================================================
+    # Error Schema (RFC 7807 Problem Details)
+    # =========================================================================
+    ProblemDetail:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+      properties:
+        type:
+          type: string
+          format: uri
+          description: A URI reference that identifies the problem type
+          example: "https://api.demo-app.com/errors/validation-error"
+        title:
+          type: string
+          description: A short, human-readable summary of the problem type
+          example: Validation Error
+        status:
+          type: integer
+          description: The HTTP status code
+          example: 400
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence
+          example: "Incident date cannot be in the future"
+        instance:
+          type: string
+          description: A URI reference that identifies the specific occurrence
+          example: "/api/claims/123"
+
+  securitySchemes:
+    keycloak:
+      type: oauth2
+      description: Keycloak OAuth 2.0 authentication
+      flows:
+        authorizationCode:
+          authorizationUrl: http://localhost:8180/realms/demo-app/protocol/openid-connect/auth
+          tokenUrl: http://localhost:8180/realms/demo-app/protocol/openid-connect/token
+          scopes:
+            openid: OpenID Connect scope
+            profile: User profile information
+
+security:
+  - keycloak:
+      - openid
+      - profile
