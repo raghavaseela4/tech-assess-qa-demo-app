@@ -18,10 +18,10 @@ test('test', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Describe what happened *' }).click();
   await page.getByRole('textbox', { name: 'Describe what happened *' }).fill(description);
   await page.getByTestId('wizard-step-2').getByRole('button', { name: 'Next' }).click();
-  await page.getByTestId('wizard-step-3').getByRole('button', { name: 'Submit Claim' }).click();
+ await page.getByTestId('wizard-step-3').getByRole('button', { name: 'Submit Claim' }).click();
+await page.getByRole('heading', { name: 'My Claims' }).waitFor();
 
-  // TODO: assert the new claim appears in My Claims
-  const row = page.getByRole('row', { name: description });
-  await expect(row).toBeVisible();
-  await expect(row).toContainText('Submitted');
+const row = page.getByRole('row', { name: description });
+await expect(row).toBeVisible();
+await expect(row).toContainText('Submitted');
 });
